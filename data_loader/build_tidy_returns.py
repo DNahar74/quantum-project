@@ -9,7 +9,7 @@ def main() -> None:
     the result to data/processed/daily_returns.csv.
     """
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    daily_file = os.path.join(root_dir, "5_Industry_Portfolios_Daily.csv")
+    daily_file = os.path.join(root_dir, "12_Industry_Portfolios_Daily.csv")
     out_file = os.path.join(root_dir, "data", "processed", "daily_returns.csv")
     
     # Parse the daily returns section
@@ -17,7 +17,7 @@ def main() -> None:
     df = parse_multitable_csv(daily_file, section_header)
     
     # Ensure column order
-    expected_cols = ["Cnsmr", "Manuf", "HiTec", "Hlth", "Other"]
+    expected_cols = ["NoDur", "Durbl", "Manuf", "Enrgy", "Chems", "BusEq", "Telcm", "Utils", "Shops", "Hlth", "Money", "Other"]
     df = df[expected_cols]
     
     # Drop rows with NaN
