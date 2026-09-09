@@ -77,7 +77,7 @@ services:
       - DB_PATH=/app/results_store_data/results.db
       - RETURNS_FILE=/app/data/processed/daily_returns.csv
       - BACKTEST_MARKOWITZ_URL=http://markowitz-service:8000/optimize
-      - BACKTEST_QAOA_URL=http://qaoa-service:8001/optimize
+      - BACKTEST_QAOA_URL=http://qaoa-service:8000/optimize
       - BACKTEST_START_DATE=${BACKTEST_START_DATE:-2024-01-01}
       - BACKTEST_END_DATE=${BACKTEST_END_DATE:-2024-03-31}
       - BACKTEST_WINDOW_DAYS=${BACKTEST_WINDOW_DAYS:-252}
