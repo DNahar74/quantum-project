@@ -4,8 +4,19 @@ import httpx
 import respx
 from unittest.mock import patch
 
-from backtest_orchestrator.orchestrator import compute_realized_return, send_optimization_request, run_backtest
+from backtest_orchestrator.orchestrator import compute_realized_return, send_optimization_request, run_backtest, resolve_backtest_bounds
 from shared_contracts.contracts import OptimizationRequest
+
+def test_resolve_backtest_bounds_uses_full_historical_window():
+    dates = pd.date_range("2020-01-01", "2021-12-31", freq="D")
+    returns_df = pd.DataFrame({"A": np.linspace(0.0, 0.02, len(dates))}, index=dates)
+
+    start, end = resolve_backtest_bounds(returns_df, None, None, 252)
+
+    assert start >= pd.Timestamp("2021-01-01")
+    assert start <= pd.Timestamp("2021-01-08")
+    assert end == pd.Timestamp("2021-12-31")
+
 
 def test_turnover_and_rebalance_day_exclusion():
     # Setup dummy returns

@@ -4,6 +4,7 @@ pydantic==2.8.2
 pydantic-settings==2.3.4
 prometheus-fastapi-instrumentator==7.0.0
 numpy==1.26.4
+scipy==1.15.3
 qiskit==1.1.0
 qiskit-optimization==0.6.1
 qiskit-aer==0.14.2

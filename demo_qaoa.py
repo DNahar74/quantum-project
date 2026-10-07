@@ -28,9 +28,9 @@ def run_demo():
         "request_id": "demo-run-qaoa"
     }
     
-    B = 3
-    
-    print(f"Running Exact Brute Force Solver for B={B}...")
+    B = None  # same cardinality sweep as the service
+
+    print("Running Exact Brute Force Solver over every feasible B...")
     t0 = time.perf_counter()
     w_exact, obj_exact = brute_force_solver(tickers, mu_hat, sigma_df.values.tolist(), 1.0, caps, B)
     t1 = time.perf_counter()

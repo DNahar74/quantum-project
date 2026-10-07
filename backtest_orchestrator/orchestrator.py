@@ -55,15 +55,52 @@ def compute_realized_return(
             
     return port_return
 
+def resolve_backtest_bounds(returns_df: pd.DataFrame, start_date: str | pd.Timestamp | None = None, end_date: str | pd.Timestamp | None = None, min_window_days: int = 252) -> tuple[pd.Timestamp, pd.Timestamp]:
+    """Return the inclusive date range to evaluate the backtest.
+
+    By default this uses the full history in the cleaned returns file so every
+    available weekly rebalance can be assessed. When explicit bounds are passed,
+    they override the dataset defaults.
+    """
+    dataset_start = returns_df.index.min()
+    dataset_end = returns_df.index.max()
+
+    if start_date is not None and str(start_date).strip() == "":
+        start_date = None
+    if end_date is not None and str(end_date).strip() == "":
+        end_date = None
+
+    resolved_start = pd.to_datetime(start_date) if start_date is not None else dataset_start
+    resolved_end = pd.to_datetime(end_date) if end_date is not None else dataset_end
+
+    if resolved_start < dataset_start:
+        resolved_start = dataset_start
+    if resolved_end > dataset_end:
+        resolved_end = dataset_end
+
+    if resolved_start > resolved_end:
+        raise ValueError(f"Backtest start date {resolved_start} is after end date {resolved_end}.")
+
+    if (resolved_end - resolved_start).days + 1 < min_window_days:
+        logger.warning(
+            "Requested backtest window is shorter than the default lookback window (%s days); "
+            "the optimizer may skip early weeks until enough history exists.",
+            min_window_days,
+        )
+
+    return resolved_start, resolved_end
+
+
 def run_backtest():
     db_path = os.environ.get("DB_PATH", os.path.join(os.path.dirname(os.path.dirname(__file__)), "results.db"))
     init_db(db_path)
     
     daily_file = os.environ.get("RETURNS_FILE", os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "processed", "daily_returns.csv"))
     returns_df = pd.read_csv(daily_file, index_col="date", parse_dates=["date"])
-    
-    start_date = pd.to_datetime(settings.start_date)
-    end_date = pd.to_datetime(settings.end_date)
+
+    start_date = os.environ.get("BACKTEST_START_DATE", settings.start_date)
+    end_date = os.environ.get("BACKTEST_END_DATE", settings.end_date)
+    start_date, end_date = resolve_backtest_bounds(returns_df, start_date, end_date, min_window_days=settings.window_days)
     
     mask = (returns_df.index >= start_date) & (returns_df.index <= end_date)
     backtest_period = returns_df.loc[mask]
@@ -85,7 +122,7 @@ def run_backtest():
     # State tracking
     prev_weights = {"markowitz": {}, "qaoa": {}}
     
-    with httpx.Client(timeout=30.0) as client:
+    with httpx.Client(timeout=settings.request_timeout) as client:
         for i in range(len(fridays)):
             reb_date = fridays[i]
             
