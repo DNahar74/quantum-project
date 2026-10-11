@@ -52,10 +52,6 @@ def optimize(req: OptimizationRequest):
         if t not in req.caps:
             raise HTTPException(status_code=422, detail=f"caps missing for ticker {t}")
 
-    # For this proof of concept with 5 industries, we pick B=3 by default. 
-    # Or B could be deduced. We will use B=3.
-    B = 3
-
     try:
         weights, obj_val, solve_time_ms, solver_status, metadata = solve_qaoa(
             tickers=req.tickers,
@@ -63,8 +59,7 @@ def optimize(req: OptimizationRequest):
             sigma=req.sigma,
             risk_aversion=req.risk_aversion,
             caps=req.caps,
-            long_only=req.long_only,
-            B=B
+            long_only=req.long_only
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -61,7 +61,6 @@ services:
       context: .
       dockerfile: data_loader/Dockerfile
     volumes:
-      - ./12_Industry_Portfolios_Daily.csv:/app/12_Industry_Portfolios_Daily.csv:ro
       - processed_data:/app/data/processed
     profiles:
       - tools
@@ -78,8 +77,8 @@ services:
       - RETURNS_FILE=/app/data/processed/daily_returns.csv
       - BACKTEST_MARKOWITZ_URL=http://markowitz-service:8000/optimize
       - BACKTEST_QAOA_URL=http://qaoa-service:8000/optimize
-      - BACKTEST_START_DATE=${BACKTEST_START_DATE:-2024-01-01}
-      - BACKTEST_END_DATE=${BACKTEST_END_DATE:-2024-03-31}
+      - BACKTEST_START_DATE=${BACKTEST_START_DATE:-}
+      - BACKTEST_END_DATE=${BACKTEST_END_DATE:-}
       - BACKTEST_WINDOW_DAYS=${BACKTEST_WINDOW_DAYS:-252}
       - BACKTEST_TCOST_BPS=${BACKTEST_TCOST_BPS:-10.0}
       - BACKTEST_RISK_AVERSION=${BACKTEST_RISK_AVERSION:-1.0}
@@ -92,11 +91,11 @@ services:
       - tools
 
   prometheus:
-    image: prom/prometheus:v2.45.0
+    build:
+      context: .
+      dockerfile: Dockerfile.prometheus
     ports:
       - "9090:9090"
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
 
   grafana:
     image: grafana/grafana:10.0.3
