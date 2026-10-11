@@ -4,7 +4,11 @@ import numpy as np
 import pytest
 from tempfile import NamedTemporaryFile
 from data_loader.parse_multitable_csv import parse_multitable_csv
+from data_loader.build_tidy_returns import build_tidy_returns
 from data_loader.lookup import sigma_for_date, caps_for_date
+
+# Column order build_tidy_returns writes from 12_Industry_Portfolios_Daily.csv.
+INDUSTRIES = ["NoDur", "Durbl", "Manuf", "Enrgy", "Chems", "BusEq", "Telcm", "Utils", "Shops", "Hlth", "Money", "Other"]
 
 FIXTURE_CSV = """
 This is some dummy text.
@@ -48,8 +52,7 @@ def test_build_tidy_returns_output():
     df = pd.read_csv(daily_returns_path, index_col="date")
     
     # Check column order
-    expected_cols = ["Cnsmr", "Manuf", "HiTec", "Hlth", "Other"]
-    assert list(df.columns) == expected_cols
+    assert list(df.columns) == INDUSTRIES
     
     # Check for NaNs
     assert not df.isna().any().any()
@@ -71,7 +74,7 @@ def test_sigma_for_date_properties():
         eigenvalues = np.linalg.eigvalsh(sigma.values)
         assert np.all(eigenvalues >= -1e-8)
         
-        assert sigma.shape == (5, 5)
+        assert sigma.shape == (len(INDUSTRIES), len(INDUSTRIES))
     except Exception as e:
         if isinstance(e, FileNotFoundError):
             pytest.skip("Data not generated yet")
@@ -104,6 +107,23 @@ def test_caps_for_date_sanity():
             pytest.skip("Data not generated yet")
         else:
              raise e
+
+def test_any_industry_file_flows_through_build_and_lookup(tmp_path, monkeypatch):
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    out_file = str(tmp_path / "daily_returns_5_industry.csv")
+
+    df = build_tidy_returns(os.path.join(root_dir, "5_Industry_Portfolios_Daily.csv"), out_file)
+
+    assert list(df.columns) == ["Cnsmr", "Manuf", "HiTec", "Hlth", "Other"]
+    assert not df.isna().any().any()
+    assert df.abs().max().max() < 1.0      # decimals, not percent
+
+    # sigma/caps follow RETURNS_FILE, the same file the orchestrator reads realized returns from.
+    monkeypatch.setenv("RETURNS_FILE", out_file)
+    sigma = sigma_for_date("2020-01-03", window_days=252)
+    caps = caps_for_date("2020-01-03", window_days=252)
+    assert sigma.shape == (5, 5)
+    assert list(caps) == list(df.columns)
 
 def test_sigma_for_date_too_early():
     with pytest.raises(ValueError):

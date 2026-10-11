@@ -35,6 +35,7 @@ const ComparisonOverview: React.FC = () => {
               xKey="name" 
               yKey="Sharpe" 
               color="#3b82f6" 
+              tickFormatter={(val: number) => formatNumber(val)}
               tooltipFormatter={(val: number) => formatNumber(val)} 
             />
           </div>
