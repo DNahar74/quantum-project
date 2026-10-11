@@ -24,11 +24,16 @@ def init_db(db_path: str = "results.db"):
             solver_status TEXT NOT NULL,
             solve_time_ms REAL NOT NULL,
             sigma_hash TEXT NOT NULL,
+            mu_hat_hash TEXT,
             caps_hash TEXT NOT NULL,
             risk_aversion REAL NOT NULL,
             UNIQUE(rebalance_date, arm_name)
         )
     ''')
+    # Databases created before mu_hat_hash existed get the column added; their old rows stay NULL.
+    columns = {row[1] for row in c.execute("PRAGMA table_info(backtest_results)")}
+    if "mu_hat_hash" not in columns:
+        c.execute("ALTER TABLE backtest_results ADD COLUMN mu_hat_hash TEXT")
     conn.commit()
     conn.close()
 
@@ -51,8 +56,8 @@ def insert_result(db_path: str, result: Dict[str, Any]):
         INSERT OR REPLACE INTO backtest_results (
             request_id, rebalance_date, arm_name, weights, turnover,
             realized_return, transaction_cost, solver_status,
-            solve_time_ms, sigma_hash, caps_hash, risk_aversion
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            solve_time_ms, sigma_hash, mu_hat_hash, caps_hash, risk_aversion
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         result["request_id"],
         result["rebalance_date"],
@@ -64,6 +69,7 @@ def insert_result(db_path: str, result: Dict[str, Any]):
         result["solver_status"],
         result["solve_time_ms"],
         result["sigma_hash"],
+        result["mu_hat_hash"],
         result["caps_hash"],
         result["risk_aversion"]
     ))

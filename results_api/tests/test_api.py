@@ -60,6 +60,7 @@ def test_sharpe_and_drawdown_calculation():
             "solver_status": "optimal",
             "solve_time_ms": 1.0,
             "sigma_hash": "hash",
+            "mu_hat_hash": "hash",
             "caps_hash": "hash",
             "risk_aversion": 1.0
         })

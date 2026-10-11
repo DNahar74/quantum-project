@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from data_loader.lookup import sigma_for_date, caps_for_date
 from backtest_orchestrator.config import settings
-from backtest_orchestrator.forecaster import get_mu_hat
+from backtest_orchestrator.forecaster import get_mu_hat, MuHatUnavailableError, MU_HAT_HORIZON_DAYS
 from shared_contracts.contracts import OptimizationRequest, OptimizationResult
 from results_store.db import init_db, insert_result, compute_hash
 
@@ -134,15 +134,26 @@ def run_backtest():
                 continue
                 
             tickers = list(sigma_df.columns)
-            mu_hat = get_mu_hat(reb_date, tickers)
-            
+            try:
+                mu_hat = get_mu_hat(reb_date, tickers)
+            except MuHatUnavailableError as e:
+                logger.warning(f"Skipping {reb_date}: {e}")
+                continue
+
+            # mu_hat forecasts a MU_HAT_HORIZON_DAYS-day return while sigma_for_date is a daily
+            # covariance. Scale sigma once here so every arm gets both in the same units.
+            sigma = (sigma_df * MU_HAT_HORIZON_DAYS).values.tolist()
+            sigma_hash = compute_hash(sigma)
+            mu_hat_hash = compute_hash(mu_hat)
+            caps_hash = compute_hash(caps)
+
             req_id = f"reb-{reb_date.strftime('%Y%m%d')}-{uuid.uuid4().hex[:8]}"
             
             # Formulate the single request
             req = OptimizationRequest(
                 tickers=tickers,
                 mu_hat=mu_hat,
-                sigma=sigma_df.values.tolist(),
+                sigma=sigma,
                 risk_aversion=settings.risk_aversion,
                 caps=caps,
                 long_only=True,
@@ -186,11 +197,7 @@ def run_backtest():
                 # Transaction cost
                 tcost = (settings.tcost_bps / 10000.0) * turnover
                 net_ret = gross_ret - tcost
-                
-                
-                sigma_hash = compute_hash(sigma_df.values.tolist())
-                caps_hash = compute_hash(caps)
-                
+
                 res_dict = {
                     "request_id": res.request_id,
                     "rebalance_date": reb_date.strftime('%Y-%m-%d'),
@@ -202,6 +209,7 @@ def run_backtest():
                     "solver_status": res.solver_status,
                     "solve_time_ms": res.solve_time_ms,
                     "sigma_hash": sigma_hash,
+                    "mu_hat_hash": mu_hat_hash,
                     "caps_hash": caps_hash,
                     "risk_aversion": settings.risk_aversion
                 }
