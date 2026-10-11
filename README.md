@@ -2,6 +2,8 @@
 
 This project simulates a weekly portfolio backtest comparing classical Markowitz Mean-Variance Optimization against a Quantum Approximate Optimization Algorithm (QAOA) subset selector, using historical Fama-French industry returns.
 
+For how the pipeline and both optimizers work, see [ARCHITECTURE.md](ARCHITECTURE.md). For known issues and open design questions, see [REVIEW.md](REVIEW.md).
+
 ## Prerequisites
 
 1. **Docker Desktop** installed and running.
@@ -28,6 +30,14 @@ docker compose run --rm data-loader
 ```
 *(This will output: `Successfully built tidy returns at /app/data/processed/daily_returns.csv`)*
 
+### 2b. Build the Return Forecasts
+The neural-network forecaster trains walk-forward on the processed returns (one retrain per year) and writes one week-ahead expected-return vector per rebalance Friday to `data/processed/mu_hat.csv`. Rerun it whenever the returns file changes:
+
+```bash
+docker compose run --rm forecaster
+```
+*(Fridays in the first five years of data have no forecast and are skipped by the backtest.)*
+
 ### 3. Run the Backtest Orchestrator
 The orchestrator drives the backtest. It loops through the historical Fridays, calculates trailing 252-day covariance matrices, and hits both optimization solvers concurrently. The results are stored in a persistent SQLite database volume.
 
@@ -40,6 +50,17 @@ docker compose run --rm backtest-orchestrator
 Once the backtest is complete, open your browser to view the interactive results:
 
 **http://localhost:8080**
+
+### Running another dataset
+Steps 2–4 use the 12-industry file by default. To run the 5-industry file without overwriting those results, give it its own processed file and results database. Put these in a `.env` file next to `docker-compose.yml`, or pass them with `docker compose --env-file <file>`:
+
+```bash
+RAW_RETURNS_CSV=5_Industry_Portfolios_Daily.csv
+RETURNS_CSV=daily_returns_5_industry.csv
+RESULTS_DB=results_5_industry.db
+```
+
+Then repeat steps 2 and 3, and run `docker compose up -d results-api` so the dashboard reads the new database. Remove the variables and run `docker compose up -d results-api` again to switch back. See [ARCHITECTURE.md](ARCHITECTURE.md#configuration-and-datasets) for details.
 
 ## Troubleshooting
 

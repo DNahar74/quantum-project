@@ -28,11 +28,12 @@ For each Rebalance Date in the series, the Orchestrator initiates a strict seque
 *   It passes this slice to the `data_loader` pure functions:
     *   `sigma_for_date()`: Computes the empirical covariance matrix $\Sigma$ of the assets over the window, utilizing Ledoit-Wolf shrinkage.
     *   `caps_for_date()`: Computes the maximum allowable weight per asset based on an inverse-volatility heuristic.
-    *   `get_mu_hat()`: Retrieves the expected returns $\hat{\mu}$ vector (currently a placeholder zero-vector as we focus on minimum-variance/risk).
+    *   `get_mu_hat()`: Looks up the expected returns $\hat{\mu}$ for the date in `data/processed/mu_hat.csv` (written by `forecaster/build_mu_hat.py`). Each value is a 5-trading-day return forecast. Dates without a row are skipped.
+*   Because $\hat{\mu}$ is weekly and $\Sigma$ daily, the orchestrator multiplies $\Sigma$ by 5 once before building the request.
 
 #### B. Request Locking & Hashing
 *   The orchestrator instantiates an `OptimizationRequest` Pydantic model containing the $\hat{\mu}$, $\Sigma$, caps, and risk aversion $q$.
-*   It generates a deterministic SHA-256 hash of the $\Sigma$ matrix and the caps array.
+*   It generates a deterministic SHA-256 hash of the (weekly) $\Sigma$ matrix, the $\hat{\mu}$ vector and the caps array.
 *   It creates a unique `request_id` for this specific date (e.g., `reb-20240105-8278c27e`).
 
 #### C. Concurrent Dispatch

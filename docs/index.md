@@ -2,6 +2,8 @@
 
 This project is a modular, microservices-based backtesting pipeline comparing classical Markowitz Mean-Variance optimization with Quantum Approximate Optimization Algorithm (QAOA) based cardinality-constrained portfolio selection.
 
+For the end-to-end data flow (inputs, outputs and transformations of every module), see **[Pipeline](pipeline.md)**.
+
 ## Core Modules
 
 1. **[Data Loader](data_loader.md)**: Ingests raw Fama-French industry portfolios, builds tidy trailing window returns, and provides pure functions for covariance ($\Sigma$) and asset caps lookups.
