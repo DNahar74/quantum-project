@@ -86,26 +86,32 @@ def solve_markowitz(
     # Suppress output, use OSQP or Clarabel/ECOS
     try:
         problem.solve(solver=solver, warm_start=True)
-    except Exception as e:
-        # e.g., solver failure
-        pass
-        
+        solved = True
+    except Exception:
+        # cvxpy raises before unpacking, so problem.status and w.value would still hold the
+        # previous request's solution on this cached problem; never return those.
+        solved = False
+
     solve_time_ms = (time.perf_counter() - start_time) * 1000.0
-    
-    status = problem.status if problem.status is not None else "failed"
-    
-    w_val = w.value
+
+    if solved:
+        status = problem.status if problem.status is not None else "failed"
+        w_val = w.value
+    else:
+        status, w_val = cp.SOLVER_ERROR, None
+
     if w_val is None:
         # If solver completely failed to find anything, fallback to zeros
         w_val = np.zeros(n)
         obj_val = 0.0
     else:
-        # Clip numerical noise to 0 and renormalize
-        w_val = np.maximum(w_val, 0.0)
-        sum_w = np.sum(w_val)
-        if sum_w > 0:
-            w_val = w_val / sum_w
-            
+        if long_only:
+            # Clip numerical noise to 0 and renormalize
+            w_val = np.maximum(w_val, 0.0)
+            sum_w = np.sum(w_val)
+            if sum_w > 0:
+                w_val = w_val / sum_w
+
         # Re-evaluate objective with cleaned weights
         obj_val = (mu_hat_arr.T @ w_val - risk_aversion * (w_val.T @ sigma_arr @ w_val)).item()
         

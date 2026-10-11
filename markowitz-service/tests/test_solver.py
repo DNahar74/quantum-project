@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 import cvxpy as cp
+from unittest.mock import patch
 from app.solver import solve_markowitz
 
 def test_closed_form_2_asset():
@@ -38,6 +39,35 @@ def test_kkt_residual_5_asset():
     # Check bounds
     assert np.all(w_vec >= -1e-5)
     assert np.all(w_vec <= 0.4 + 1e-5)
+
+def test_solver_error_does_not_return_previous_solution():
+    tickers = ["A", "B"]
+    sigma = [[0.04, 0.0], [0.0, 0.01]]
+    caps = {"A": 1.0, "B": 1.0}
+    # Populate the cached problem with a good solution first.
+    solve_markowitz(tickers, [0.10, 0.05], sigma, 1.0, caps, True)
+
+    with patch.object(cp.Problem, "solve", side_effect=cp.error.SolverError("boom")):
+        weights, obj, t_ms, status = solve_markowitz(tickers, [0.05, 0.10], sigma, 1.0, caps, True)
+
+    assert status == cp.SOLVER_ERROR
+    assert weights == {"A": 0.0, "B": 0.0}
+    assert obj == 0.0
+
+def test_short_positions_kept_when_not_long_only():
+    tickers = ["A", "B"]
+    mu_hat = [0.10, -0.05]
+    sigma = [[0.04, 0.0], [0.0, 0.01]]
+    caps = {"A": 2.0, "B": 2.0}
+
+    weights, obj, t_ms, status = solve_markowitz(tickers, mu_hat, sigma, 1.0, caps, False)
+
+    # Closed form: maximise mu.w - w'Sw with w_A + w_B = 1 -> w_A = (mu_A - mu_B + 2*s_B) / (2*(s_A + s_B)) = 1.7
+    w_a = (0.10 + 0.05 + 2 * 0.01) / (2 * (0.04 + 0.01))
+    assert status == "optimal"
+    assert np.isclose(weights["A"], w_a, atol=1e-4)
+    assert np.isclose(weights["B"], 1 - w_a, atol=1e-4)
+    assert weights["B"] < 0
 
 def test_cross_solver_agreement():
     tickers = ["A", "B"]
