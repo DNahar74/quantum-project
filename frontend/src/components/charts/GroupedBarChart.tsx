@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, LabelList } from 'recharts';
 import { CHART_THEME } from '../../lib/theme/chartTheme';
 
 interface GroupedBarChartProps {
@@ -26,6 +26,8 @@ export const GroupedBarChart: React.FC<GroupedBarChartProps> = ({
           dy={10}
         />
         <YAxis 
+          // Always include zero, so negative values hang below a visible baseline.
+          domain={[(min: number) => Math.min(0, min), (max: number) => Math.max(0, max)]}
           tickFormatter={tickFormatter}
           tick={{ fontFamily: CHART_THEME.fontFamily, fontSize: CHART_THEME.fontSize, fill: CHART_THEME.axisColor }}
           axisLine={false}
@@ -37,7 +39,15 @@ export const GroupedBarChart: React.FC<GroupedBarChartProps> = ({
           contentStyle={CHART_THEME.tooltip}
           cursor={{ fill: '#f1f5f9' }}
         />
-        <Bar dataKey={yKey} fill={color} radius={[4, 4, 0, 0]} />
+        <ReferenceLine y={0} stroke={CHART_THEME.axisColor} />
+        <Bar dataKey={yKey} fill={color} radius={[4, 4, 0, 0]}>
+          <LabelList
+            dataKey={yKey}
+            position="top"
+            formatter={((val: number) => (tooltipFormatter ? tooltipFormatter(val) : val)) as any}
+            style={{ fontFamily: CHART_THEME.fontFamily, fontSize: CHART_THEME.fontSize, fill: '#1e293b' }}
+          />
+        </Bar>
       </BarChart>
     </ResponsiveContainer>
   );
