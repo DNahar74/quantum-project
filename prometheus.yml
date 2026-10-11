@@ -7,7 +7,7 @@ scrape_configs:
       - targets: ['markowitz-service:8000']
   - job_name: 'qaoa-service'
     static_configs:
-      - targets: ['qaoa-service:8001']
+      - targets: ['qaoa-service:8000']
   - job_name: 'results-api'
     static_configs:
       - targets: ['results-api:8000']

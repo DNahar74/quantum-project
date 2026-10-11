@@ -8,7 +8,7 @@ COPY data_loader/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 COPY data_loader/ /app/data_loader/
-COPY 12_Industry_Portfolios_Daily.csv /app/12_Industry_Portfolios_Daily.csv
+COPY 12_Industry_Portfolios_Daily.csv 5_Industry_Portfolios_Daily.csv /app/
 COPY shared_contracts/ /app/shared_contracts/
 
 RUN chown -R appuser:appuser /app
